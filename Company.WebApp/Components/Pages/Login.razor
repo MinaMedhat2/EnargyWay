@@ -1,0 +1,166 @@
+﻿@page "/"
+@page "/login"
+
+@using Microsoft.AspNetCore.Components.Authorization
+@rendermode InteractiveServer
+@layout AuthLayout
+@using Company.WebApp.Auth
+
+@inject IJSRuntime JSRuntime
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
+
+@* ... Your HTML code remains exactly the same ... *@
+<div class="container" id="container">
+    <div class="form-container sign-up-container">
+        <form @onsubmit="HandleSignUp" @onsubmit:preventDefault>
+            <h1>Create Account</h1>
+            <input @bind="registerModel.Username" type="text" placeholder="Username" required />
+            <input @bind="registerModel.Email" type="email" placeholder="Email" required />
+            <input @bind="registerModel.Password" type="password" placeholder="Password" required />
+            <button class="btn-submit" type="submit">Sign Up</button>
+            @if (!string.IsNullOrEmpty(registerMessage))
+            {
+                <p style="color: #28a745; margin-top: 15px;">@registerMessage</p>
+            }
+        </form>
+    </div>
+    <div class="form-container sign-in-container">
+        <form @onsubmit="HandleLogin" @onsubmit:preventDefault>
+            <h1>Sign In</h1>
+            <input @bind="loginModel.Email" type="email" placeholder="Email" required />
+            <input @bind="loginModel.Password" type="password" placeholder="Password" required />
+            <a href="#">Forgot your password?</a>
+            <button class="btn-submit" type="submit">Sign In</button>
+            @if (!string.IsNullOrEmpty(loginMessage))
+            {
+                <p style="color: red; margin-top: 15px;">@loginMessage</p>
+            }
+        </form>
+    </div>
+    <div class="overlay-container">
+        <div class="overlay">
+            <div class="overlay-panel overlay-left">
+                <h1>Welcome Back!</h1>
+                <p>To keep connected with us please login with your personal info</p>
+                <button type="button" class="ghost" id="signIn" @onclick="() => ActivatePanel(false)">Sign In</button>
+            </div>
+            <div class="overlay-panel overlay-right">
+                <h1>Hello, Friend!</h1>
+                <p>Enter your personal details and start journey with us</p>
+                <button type="button" class="ghost" id="signUp" @onclick="() => ActivatePanel(true)">Sign Up</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@code {
+    private LoginDto loginModel = new();
+    private RegisterDto registerModel = new();
+    private string loginMessage = "";
+    private string registerMessage = "";
+
+    private async Task HandleLogin()
+    {
+        loginMessage = "";
+        try
+        {
+            var response = await Http.PostAsJsonAsync("api/auth/login", loginModel);
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<LoginResult>();
+
+                if (result != null && !string.IsNullOrEmpty(result.userRole))
+                {
+                    // --- بداية التعديل ---
+                    // أضفنا حالة جديدة لمندوب التوصيل
+                    string destination;
+                    if (result.userRole.Equals("Admin", StringComparison.OrdinalIgnoreCase))
+                    {
+                        destination = "/admin-dashboard";
+                    }
+                    else if (result.userRole.Equals("StoreManager", StringComparison.OrdinalIgnoreCase))
+                    {
+                        destination = "/store-manager-dashboard";
+                    }
+                    else if (result.userRole.Equals("DeliveryPerson", StringComparison.OrdinalIgnoreCase))
+                    {
+                        destination = "/delivery-dashboard"; // الصفحة الجديدة لمندوب التوصيل
+                    }
+                    else
+                    {
+                        destination = "/user-dashboard";
+                    }
+                    // --- نهاية التعديل ---
+
+                    // الخطوة 1: قم بتوجيه المستخدم إلى الصفحة الصحيحة أولاً
+                    Navigation.NavigateTo(destination); // توجيه بدون إعادة تحميل قوية
+
+                    // الخطوة 2: بعد التوجيه، قم بتحديث حالة المصادقة
+                    var customAuthStateProvider = (CustomAuthenticationStateProvider)AuthStateProvider;
+                    await customAuthStateProvider.UpdateAuthenticationState(new CustomAuthenticationStateProvider.UserSession
+                    {
+                        Username = result.username,
+                        Role = result.userRole
+                    });
+                }
+                else
+                {
+                    loginMessage = "Failed to retrieve user role from server.";
+                }
+            }
+            else
+            {
+                loginMessage = "Invalid email or password.";
+            }
+        }
+        catch (Exception ex)
+        {
+            loginMessage = "Error connecting to the server. Please try again later.";
+            Console.WriteLine($"Login Error: {ex.Message}");
+        }
+    }
+
+    private async Task HandleSignUp()
+    {
+        registerMessage = "";
+        try
+        {
+            var response = await Http.PostAsJsonAsync("api/auth/register", registerModel);
+            if (response.IsSuccessStatusCode)
+            {
+                registerMessage = "Registration successful! Please sign in.";
+                await ActivatePanel(false);
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                registerMessage = string.IsNullOrWhiteSpace(error) ? "Registration failed." : error;
+            }
+        }
+        catch (Exception ex)
+        {
+            registerMessage = "Error connecting to the server. Please try again later.";
+            Console.WriteLine($"SignUp Error: {ex.Message}");
+        }
+    }
+
+    private async Task ActivatePanel(bool showSignUp)
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("toggleAuthPanel", showSignUp);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"JavaScript interop error: {ex.Message}");
+        }
+    }
+
+    // --- Models ---
+    public class LoginDto { public string Email { get; set; } = ""; public string Password { get; set; } = ""; }
+    public class RegisterDto { public string Username { get; set; } = ""; public string Email { get; set; } = ""; public string Password { get; set; } = ""; }
+    public class LoginResult { public string message { get; set; } = ""; public string userRole { get; set; } = ""; public string username { get; set; } = ""; }
+}

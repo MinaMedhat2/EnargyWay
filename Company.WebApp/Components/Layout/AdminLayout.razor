@@ -1,0 +1,73 @@
+﻿@inherits LayoutComponentBase
+
+<!-- ✅ تحميل الأنماط الخاصة بلوحة التحكم فقط -->
+<link href="css/dashboard.css" rel="stylesheet" />
+
+<div class="admin-main-container">
+    <!-- ✅ تم تعديل الـ Navbar ليعتمد على dashboard.css -->
+    <nav class="navbar navbar-expand-lg shadow-sm">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/admin-dashboard">
+                <i class="fas fa-cogs"></i> Admin Panel
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#adminNavbar">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="adminNavbar">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <NavLink class="nav-link" href="/admin/products" Match="NavLinkMatch.Prefix">
+                            <i class="fas fa-box-open"></i> Products
+                        </NavLink>
+                    </li>
+                    <li class="nav-item">
+                        <NavLink class="nav-link" href="/admin/employees" Match="NavLinkMatch.Prefix">
+                            <i class="fas fa-users-cog"></i> Employees
+                        </NavLink>
+                    </li>
+                    <li class="nav-item">
+                        <NavLink class="nav-link" href="/admin/customers" Match="NavLinkMatch.Prefix">
+                            <i class="fas fa-user-friends"></i> Customers
+                        </NavLink>
+                    </li>
+                    <li class="nav-item">
+                        <NavLink class="nav-link" href="/admin/sales" Match="NavLinkMatch.Prefix">
+                            <i class="fas fa-chart-line"></i> Daily Sales
+                        </NavLink>
+                    </li>
+                    <li class="nav-item">
+                        <NavLink class="nav-link" href="/admin/monthly-sales" Match="NavLinkMatch.Prefix">
+                            <i class="fas fa-calendar-alt"></i> Monthly Sales
+                        </NavLink>
+                    </li>
+                    <li class="nav-item">
+                        <NavLink class="nav-link" href="/admin/low-stock" Match="NavLinkMatch.Prefix">
+                            <i class="fas fa-exclamation-triangle"></i> Low Stock
+                        </NavLink>
+                    </li>
+
+                    <!-- ✅ تم إضافة رابط صفحة "الأكثر مبيعًا" هنا -->
+                    <li class="nav-item">
+                        <NavLink class="nav-link" href="/admin/top-selling" Match="NavLinkMatch.Prefix">
+                            <i class="fas fa-trophy"></i> Top Selling
+                        </NavLink>
+                    </li>
+
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <!-- ✅ تم تعديل زر الخروج ليتناسب مع التصميم الجديد -->
+                        <a class="nav-link logout" href="/" style="cursor: pointer;">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ✅ تم تعديل المحتوى ليعتمد على dashboard.css -->
+    <main>
+        @Body
+    </main>
+</div>

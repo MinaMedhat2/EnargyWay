@@ -1,0 +1,446 @@
+﻿@page "/cart"
+@layout CheckoutLayout
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+
+@using Company.Client.Models
+@inject CartService cartService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Shopping Cart | EnergyWay</PageTitle>
+
+<div class="checkout-page-background">
+    <div class="overlay">
+        <div class="container py-5">
+
+            @if (isLoading)
+            {
+                <div class="text-center p-5">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="mt-3 text-light">Loading your cart...</p>
+                </div>
+            }
+            else if (cartItems == null || !cartItems.Any())
+            {
+                <div class="glass-card-opaque text-center p-5 mx-auto" style="max-width:720px;">
+                    <svg class="mb-3 text-secondary" width="80" height="80" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="9" cy="21" r="1"></circle>
+                        <circle cx="20" cy="21" r="1"></circle>
+                        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                    </svg>
+                    <h3 class="fw-bold text-white">Your cart is empty</h3>
+                    <p class="text-white-50">Looks like you haven't added anything yet.</p>
+                    <button class="btn btn-outline-light mt-3"
+                            @onclick='() => NavigationManager.NavigateTo("/products")'>
+                        Continue Shopping
+                    </button>
+                </div>
+            }
+            else
+            {
+                <div class="row g-4">
+                    <!-- Products Column -->
+                    <div class="col-lg-8">
+                        <div class="d-flex align-items-center gap-2 mb-4">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none"
+                                 stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"
+                                 class="text-white opacity-75">
+                                <circle cx="9" cy="21" r="1"></circle>
+                                <circle cx="20" cy="21" r="1"></circle>
+                                <path d="M1 1h4l2.3 12.5A2 2 0 0 0 9.27 15h9.46a2 2 0 0 0 2-1.65L22.9 6H6"></path>
+                            </svg>
+                            <h2 class="m-0 text-white">Your Shopping Cart</h2>
+                        </div>
+
+                        <div class="row g-4">
+                            @foreach (var item in cartItems)
+                            {
+                                <div class="col-md-6">
+                                    <div class="glass-card product-card h-100 position-relative">
+
+                                        <!-- Remove button -->
+                                        <button class="icon-btn remove-btn"
+                                                title="Remove item"
+                                                @onclick="() => RemoveItem(item.ProductId)">
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <polyline points="3 6 5 6 21 6"></polyline>
+                                                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+                                                <path d="M10 11v6"></path>
+                                                <path d="M14 11v6"></path>
+                                                <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
+                                            </svg>
+                                        </button>
+
+                                        <!-- Product image -->
+                                        <div class="px-3 pt-3 text-center">
+                                            <img src="@GetProductImage(item)"
+                                                 alt="@item.Name"
+                                                 class="product-image" />
+                                        </div>
+
+                                        <div class="card-body d-flex flex-column pt-2">
+                                            <h6 class="fw-semibold text-center product-title">@item.Name</h6>
+
+                                            <div class="d-flex justify-content-between align-items-center small text-white-50 mb-2">
+                                                <span>Price</span>
+                                                <span class="text-white fw-semibold">$@item.Price.ToString("0.00")</span>
+                                            </div>
+
+                                            <!-- Quantity stepper -->
+                                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                                <span class="small text-white-50">Quantity</span>
+                                                <div class="quantity-stepper">
+                                                    <button class="qs-btn"
+                                                            aria-label="Decrease"
+                                                            @onclick="() => ChangeQuantity(item, item.Quantity - 1)">
+                                                        −
+                                                    </button>
+                                                    <input type="text" class="qs-input" value="@item.Quantity" readonly />
+                                                    <button class="qs-btn"
+                                                            aria-label="Increase"
+                                                            @onclick="() => ChangeQuantity(item, item.Quantity + 1)">
+                                                        +
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <div class="d-flex justify-content-between align-items-center mt-auto pt-2 border-top border-white-10">
+                                                <span class="fw-semibold text-white-50">Total</span>
+                                                <span class="fw-bold fs-6 text-success-emph">
+                                                    $@((item.Price * item.Quantity).ToString("0.00"))
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Order Summary Column -->
+                    <div class="col-lg-4">
+                        <div class="order-summary sticky-top" style="top: 24px;">
+                            <h3>Order Summary</h3>
+                            <ul class="list-group list-group-flush">
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>Subtotal</span>
+                                    <span class="fw-semibold">$@totalPrice.ToString("0.00")</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>Shipping</span>
+                                    <span class="badge bg-success-subtle text-success fw-semibold px-3 py-2 rounded-pill">FREE</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center border-top pt-3">
+                                    <strong>Total</strong>
+                                    <strong class="total-amount">$@totalPrice.ToString("0.00")</strong>
+                                </li>
+                            </ul>
+
+                            <div class="d-grid mt-4">
+                                <button @onclick="ProceedToCheckout">
+                                    Proceed to Checkout
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    :root {
+        --glass-bg: rgba(255,255,255,0.12);
+        --glass-border: rgba(255,255,255,0.24);
+        --white-10: rgba(255,255,255,0.1);
+        --white-16: rgba(255,255,255,0.16);
+        --white-30: rgba(255,255,255,0.30);
+        /* --- START: MODIFICATION --- */
+        /* We removed the dark overlay color from here */
+        --dark-overlay: rgba(0,0,0,0.25);
+        /* --- END: MODIFICATION --- */
+    }
+
+    /* ===== Page background ===== */
+    .checkout-page-background {
+        background: url('/images/back.jpeg') no-repeat center center / cover;
+        min-height: 100vh;
+        position: relative;
+        isolation: isolate;
+    }
+
+        .checkout-page-background .overlay {
+            /* --- START: MODIFICATION --- */
+            /* We moved the background color here and added the blur effect */
+            background: var(--dark-overlay);
+            backdrop-filter: blur(10px) saturate(120%);
+            -webkit-backdrop-filter: blur(10px) saturate(120%);
+            /* --- END: MODIFICATION --- */
+            min-height: 100vh;
+            width: 100%;
+        }
+
+    /* ===== Glass cards (products) ===== */
+    .glass-card {
+        /* --- START: MODIFICATION --- */
+        /* We make the cards slightly more transparent to blend with the new background */
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.18);
+        /* We remove the blur from the cards themselves, as the background is now blurred */
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        /* --- END: MODIFICATION --- */
+        border-radius: 16px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+        color: #fff;
+        overflow: hidden;
+        transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+    }
+
+        .glass-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 16px 38px rgba(0,0,0,0.35);
+            border-color: var(--white-30);
+        }
+
+    /* For the empty-state block */
+    .glass-card-opaque {
+        background: rgba(255,255,255,0.1);
+        border: 1px dashed var(--white-16);
+        /* The background is already blurred, so we remove it from here too */
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        border-radius: 18px;
+    }
+
+    /* ===== Product content ===== */
+    .product-card .card-body {
+        padding: 1rem 1.1rem 1.1rem 1.1rem;
+    }
+
+    .product-title {
+        font-size: 0.98rem;
+        line-height: 1.3;
+        color: #fff;
+        margin-bottom: .65rem;
+    }
+
+    .product-image {
+        height: 180px;
+        width: 100%;
+        object-fit: contain;
+        border-radius: 14px;
+        background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+    }
+
+    /* ===== Remove button (top-right) ===== */
+    .icon-btn {
+        position: absolute;
+        top: .6rem;
+        right: .6rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 34px;
+        height: 34px;
+        border-radius: 999px;
+        border: 1px solid var(--white-16);
+        background: rgba(0,0,0,0.25);
+        color: #fff;
+        transition: transform .15s ease, background .15s ease, border-color .15s ease, opacity .15s ease;
+        opacity: .9;
+    }
+
+        .icon-btn:hover {
+            transform: scale(1.04);
+            background: rgba(255,0,0,0.15);
+            border-color: rgba(255,0,0,0.35);
+            opacity: 1;
+        }
+
+    .remove-btn svg {
+        pointer-events: none;
+    }
+
+    /* ===== Quantity stepper ===== */
+    .quantity-stepper {
+        display: inline-flex;
+        align-items: center;
+        gap: .4rem;
+        background: rgba(255,255,255,0.08);
+        border: 1px solid var(--white-16);
+        border-radius: 999px;
+        padding: .25rem;
+    }
+
+    .qs-btn {
+        width: 34px;
+        height: 34px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 0;
+        border-radius: 999px;
+        background: rgba(255,255,255,0.08);
+        color: #fff;
+        font-size: 18px;
+        line-height: 1;
+        cursor: pointer;
+        transition: background .15s ease, transform .1s ease;
+    }
+
+        .qs-btn:hover {
+            background: rgba(255,255,255,0.16);
+        }
+
+        .qs-btn:active {
+            transform: scale(0.98);
+        }
+
+    .qs-input {
+        width: 48px;
+        text-align: center;
+        background: transparent;
+        border: 0;
+        color: #fff;
+        font-weight: 600;
+        outline: none;
+        pointer-events: none;
+    }
+
+    /* ===== Order summary (v2 - Glassmorphism) ===== */
+    .order-summary {
+        /* --- START: MODIFICATION --- */
+        /* We make this card match the style of the other cards now */
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.18);
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        /* --- END: MODIFICATION --- */
+        border-radius: 16px;
+        padding: 20px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    }
+
+        .order-summary h3 {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #fff;
+        }
+
+        .order-summary .list-group-item {
+            background: transparent;
+            border-color: rgba(255, 255, 255, 0.15);
+            color: #fff;
+            padding-left: 0;
+            padding-right: 0;
+        }
+
+        .order-summary .total-amount {
+            font-size: 1.6rem;
+            font-weight: bold;
+            background: linear-gradient(90deg, #00ff88, #00bfff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-fill-color: transparent;
+        }
+
+        .order-summary button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, #0099ff, #0077ff);
+            color: white;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+            .order-summary button:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 6px 20px rgba(0, 153, 255, 0.4);
+            }
+
+    .text-success-emph {
+        color: #38d39f;
+    }
+
+    .border-white-10 {
+        border-color: var(--white-10) !important;
+    }
+
+    /* ===== Buttons micro-interactions ===== */
+    .lift-on-hover {
+        transition: transform .15s ease, box-shadow .2s ease;
+    }
+
+        .lift-on-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 16px 32px rgba(0,0,0,.18);
+        }
+</style>
+
+
+@code {
+    private List<CartItem>? cartItems;
+    private decimal totalPrice = 0;
+    private bool isLoading = true;
+    private string apiBaseUrl = "https://localhost:7185";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCartItems();
+        isLoading = false;
+    }
+
+    private async Task LoadCartItems()
+    {
+        cartItems = await cartService.GetCartItems();
+        CalculateTotal();
+    }
+
+    private void CalculateTotal()
+    {
+        totalPrice = cartItems?.Sum(item => item.Price * item.Quantity) ?? 0;
+    }
+
+    private async Task RemoveItem(int productId)
+    {
+        await cartService.RemoveFromCart(productId);
+        await LoadCartItems();
+        StateHasChanged();
+    }
+
+    private async Task ChangeQuantity(CartItem item, int newQuantity)
+    {
+        if (newQuantity > 0 && newQuantity <= item.MaxAvailableStock)
+        {
+            item.Quantity = newQuantity;
+            await cartService.UpdateItemQuantity(item.ProductId, newQuantity);
+            CalculateTotal();
+            StateHasChanged();
+        }
+    }
+
+    private void ProceedToCheckout()
+    {
+        NavigationManager.NavigateTo("/checkout-cart");
+    }
+
+    private string GetProductImage(CartItem item)
+    {
+        if (!string.IsNullOrWhiteSpace(item.ImagePath))
+        {
+            if (item.ImagePath.StartsWith("http", StringComparison.OrdinalIgnoreCase)) return item.ImagePath;
+            return $"{apiBaseUrl}/{item.ImagePath.TrimStart('/')}";
+        }
+        return $"https://via.placeholder.com/600x400.png?text={Uri.EscapeDataString(item.Name)}";
+    }
+}
+ٍ

@@ -1,0 +1,40 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href="/" />
+    <link rel="stylesheet" href="bootstrap/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+
+    <!-- =================== تحميل كل ملفات الـ CSS هنا =================== -->
+    <!-- 1. الملف الرئيسي للموقع -->
+    <link rel="stylesheet" href="app.css" />
+
+    <!-- 2. ملف المصادقة (صفحة تسجيل الدخول ) -->
+    <link rel="stylesheet" href="css/Auth.css" />
+
+    <!-- 3. ✅ ملف الأدمن (إذا كان موجوداً) -->
+    <link rel="stylesheet" href="css/dashboard.css" />
+
+    <!-- 4. ✅ ملف المستخدم (الذي قمنا بإنشائه) -->
+    <link rel="stylesheet" href="css/user.css" />
+
+
+    <link rel="stylesheet" href="Company.WebApp.styles.css" />
+
+    <!-- ================================================================== -->
+
+    <link rel="stylesheet" href="Company.WebApp.styles.css" />
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <HeadOutlet @rendermode="InteractiveServer" />
+</head>
+
+<body>
+    <Routes @rendermode="InteractiveServer" />
+    <script src="_framework/blazor.server.js"></script>
+    <script src="js/Auth.js"></script>
+</body>
+
+</html>

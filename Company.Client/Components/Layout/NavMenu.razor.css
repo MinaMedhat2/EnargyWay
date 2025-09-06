@@ -1,0 +1,91 @@
+﻿/* NavMenu.razor.css */
+
+/* الهيدر الأساسي */
+.navbar {
+    background-color: #ffffff !important; /* أبيض */
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); /* ظل خفيف */
+    border-bottom: 1px solid #f1f1f1; /* خط رفيع أنيق */
+    padding: 0.75rem 1.5rem;
+    transition: all 0.3s ease-in-out;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* اللوجو */
+.navbar-brand {
+    font-weight: 700;
+    font-size: 1.25rem;
+    color: #1a1a1a !important; /* أسود فاتح */
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+}
+
+    .navbar-brand img {
+        height: 30px;
+    }
+
+/* اللينكات */
+.navbar-nav {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.nav-link {
+    color: #444 !important;
+    font-weight: 500;
+    margin: 0 6px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    transition: all 0.2s ease-in-out;
+    text-decoration: none;
+}
+
+    .nav-link:hover,
+    .nav-link.active {
+        background: #f4f6f8;
+        color: #007bff !important; /* أزرق أنيق */
+    }
+
+/* زرار Login */
+.btn-login {
+    background: linear-gradient(135deg, #007bff, #0056d2);
+    color: #fff !important;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-weight: 600;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+    transition: all 0.2s ease-in-out;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+    .btn-login:hover {
+        background: linear-gradient(135deg, #0056d2, #003c99);
+        transform: translateY(-2px);
+    }
+
+/* للموبايل */
+@media (max-width: 768px) {
+    .navbar {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .navbar-nav {
+        flex-direction: column;
+        gap: 5px;
+        margin-top: 10px;
+        width: 100%;
+    }
+
+    .btn-login {
+        margin-top: 10px;
+        width: 100%;
+        text-align: center;
+    }
+}

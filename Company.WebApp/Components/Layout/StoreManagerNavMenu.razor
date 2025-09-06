@@ -1,0 +1,30 @@
+﻿@* File: Components/Layout/StoreManagerNavMenu.razor *@
+
+<div class="top-nav-menu">
+    <div class="nav-brand">
+        <span class="oi oi-wrench" aria-hidden="true"></span> Store Manager Panel
+    </div>
+    <div class="nav-links">
+        <NavLink href="/store-manager-dashboard" class="nav-link" Match="NavLinkMatch.All">
+            <span class="oi oi-dashboard" aria-hidden="true"></span> Dashboard
+        </NavLink>
+        <NavLink href="/store-manager/products" class="nav-link">
+            <span class="oi oi-box" aria-hidden="true"></span> Products
+        </NavLink>
+
+        @* --- هذا هو الرابط الجديد الذي أضفناه --- *@
+        <NavLink href="/store-manager/orders" class="nav-link">
+            <span class="oi oi-list-rich" aria-hidden="true"></span> Orders
+        </NavLink>
+        @* --- نهاية الرابط الجديد --- *@
+    </div>
+    <div class="nav-logout">
+        <button class="btn-logout">
+            <span class="oi oi-account-logout" aria-hidden="true"></span> Logout
+        </button>
+    </div>
+</div>
+
+@code {
+    // No code needed here for now
+}

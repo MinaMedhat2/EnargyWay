@@ -1,0 +1,133 @@
+﻿@page "/admin/monthly-sales"
+@attribute [Authorize(Roles = "Admin")]
+@layout AdminLayout
+@inject HttpClient Http
+
+<PageTitle>Monthly Sales Report</PageTitle>
+
+<div class="page-header">
+    <h1>Monthly Sales Report</h1>
+    <p>Review sales performance for a specific month.</p>
+</div>
+
+<!-- Month and Year Selection -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row g-3 align-items-center">
+            <div class="col-auto">
+                <label for="year-select" class="col-form-label">Year:</label>
+            </div>
+            <div class="col-auto">
+                <input type="number" id="year-select" class="form-control" @bind="selectedYear" />
+            </div>
+            <div class="col-auto">
+                <label for="month-select" class="col-form-label">Month:</label>
+            </div>
+            <div class="col-auto">
+                <select id="month-select" class="form-select" @bind="selectedMonth">
+                    @for (int i = 1; i <= 12; i++)
+                    {
+                        <option value="@i">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(i)</option>
+                    }
+                </select>
+            </div>
+            <div class="col-auto">
+                <button class="btn btn-primary" @onclick="LoadMonthlySales" disabled="@isLoading">
+                    @if (isLoading)
+                    {
+                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                        <span> Loading...</span>
+                    }
+                    else
+                    {
+                        <span>View Report</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sales Table -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Sales for @(new DateTime(selectedYear, selectedMonth, 1).ToString("MMMM yyyy"))</span>
+        <span class="fw-bold">Total Revenue: @totalRevenue.ToString("C")</span>
+    </div>
+    <div class="card-body">
+        @if (isLoading)
+        {
+            <p class="text-center p-4"><em><span class="spinner-border" role="status"></span> Loading sales data...</em></p>
+        }
+        else if (sales != null && sales.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Product Name</th>
+                            <th>Quantity</th>
+                            <th>Total Price</th>
+                            <th>Date & Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var sale in sales)
+                        {
+                            <tr>
+                                <td>@sale.ProductName</td>
+                                <td>@sale.Quantity</td>
+                                <td>@sale.TotalPrice.ToString("C")</td>
+                                <td>@sale.SaleDate.ToString("yyyy-MM-dd HH:mm")</td> @* ← التوقيت المصري *@
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <p class="text-center text-muted p-4">No sales recorded for the selected month.</p>
+        }
+    </div>
+</div>
+
+@code {
+    private List<SaleDto> sales;
+    private int selectedYear = DateTime.Now.Year;
+    private int selectedMonth = DateTime.Now.Month;
+    private bool isLoading = false;
+    private decimal totalRevenue => sales?.Sum(s => s.TotalPrice) ?? 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadMonthlySales();
+    }
+
+    private async Task LoadMonthlySales()
+    {
+        isLoading = true;
+        sales = null;
+        StateHasChanged();
+
+        var response = await Http.GetAsync($"api/Sales/monthly?year={selectedYear}&month={selectedMonth}");
+        if (response.IsSuccessStatusCode)
+        {
+            sales = await response.Content.ReadFromJsonAsync<List<SaleDto>>();
+        }
+        else
+        {
+            sales = new List<SaleDto>();
+        }
+        isLoading = false;
+    }
+
+    public class SaleDto
+    {
+        public int SaleID { get; set; }
+        public string ProductName { get; set; }
+        public int Quantity { get; set; }
+        public decimal TotalPrice { get; set; }
+        public DateTime SaleDate { get; set; }
+    }
+}

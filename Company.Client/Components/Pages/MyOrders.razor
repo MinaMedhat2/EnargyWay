@@ -1,0 +1,304 @@
+﻿@page "/my-orders"
+@layout CheckoutLayout
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+
+@using System.Net.Http.Json
+@using Company.Client.Models
+@using Company.Client.Services
+@inject NavigationManager NavigationManager
+@inject AuthService AuthService
+@inject IHttpClientFactory HttpClientFactory
+
+<PageTitle>My Orders | EnergyWay</PageTitle>
+
+<div class="my-orders-background">
+    <div class="overlay">
+        <div class="container py-5">
+
+            @* --- START: THIS IS THE MODIFICATION --- *@
+            <div class="page-header">
+                <div class="d-flex align-items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="text-white opacity-75">
+                        <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <path d="M16 10a4 4 0 0 1-8 0"></path>
+                    </svg>
+                    <h2 class="m-0 text-white">My Orders</h2>
+                </div>
+                <button class="btn btn-primary-style btn-continue-shopping" @onclick='() => NavigationManager.NavigateTo("/products")'>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M0 2.5A.5.5 0 0 1 .5 2H2a.5.5 0 0 1 .485.379L2.89 4H14.5a.5.5 0 0 1 .485.621l-1.5 6A.5.5 0 0 1 13 11H4a.5.5 0 0 1-.485-.379L1.61 3H.5a.5.5 0 0 1-.5-.5zM3.14 5l1.25 5h8.22l1.25-5H3.14zM5 13a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm-2 1a2 2 0 1 1 4 0 2 2 0 0 1-4 0zm9-1a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm-2 1a2 2 0 1 1 4 0 2 2 0 0 1-4 0z" />
+                    </svg>
+                    <span>Continue Shopping</span>
+                </button>
+            </div>
+            @* --- END: THIS IS THE MODIFICATION --- *@
+
+
+            @if (isLoading)
+            {
+                <div class="text-center p-5">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="mt-3 text-light">Loading your orders...</p>
+                </div>
+            }
+            else if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="glass-card-opaque text-center p-5 mx-auto">
+                    <h3 class="text-danger">An Error Occurred</h3>
+                    <p class="text-white-50">@errorMessage</p>
+                </div>
+            }
+            else if (!myOrders.Any())
+            {
+                <div class="glass-card-opaque text-center p-5 mx-auto">
+                    <h3 class="fw-bold text-white">No orders found yet.</h3>
+                    <p class="text-white-50">When you place an order, it will appear here.</p>
+                    <button class="btn btn-outline-light mt-3" @onclick='() => NavigationManager.NavigateTo("/products")'>
+                        Start Shopping
+                    </button>
+                </div>
+            }
+            else
+            {
+                <div class="orders-grid">
+                    @foreach (var order in myOrders)
+                    {
+                        <div class="order-card glass-card">
+                            <div class="order-header">
+                                <div class="order-id">Order #@order.OrderId</div>
+                                <div class="order-status @GetStatusClass(order.OrderStatus)">
+                                    @order.OrderStatus
+                                </div>
+                            </div>
+                            <div class="order-body">
+                                <div class="order-detail">
+                                    <span>Order Date</span>
+                                    <span>@order.OrderDate.ToString("dd MMM yyyy, hh:mm tt")</span>
+                                </div>
+                                <div class="order-detail">
+                                    <span>Total Amount</span>
+                                    <span class="fw-bold text-primary-emphasis">$@order.TotalAmount.ToString("0.00")</span>
+                                </div>
+                                <div class="order-detail">
+                                    <span>Shipped To</span>
+                                    <span>@order.CustomerName</span>
+                                </div>
+                            </div>
+                            <div class="order-footer">
+                                <button class="btn btn-sm btn-outline-light" @onclick="() => ViewOrderDetails(order.OrderId)">View Details</button>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    .my-orders-background {
+        background: url('/images/back.jpeg') no-repeat center center / cover;
+        min-height: 100vh;
+        position: relative;
+        isolation: isolate;
+    }
+
+        .my-orders-background .overlay {
+            background: rgba(0,0,0,0.25);
+            backdrop-filter: blur(10px) saturate(120%);
+            -webkit-backdrop-filter: blur(10px) saturate(120%);
+            min-height: 100vh;
+            width: 100%;
+        }
+
+    /* --- START: NEW STYLE FOR THE HEADER --- */
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem; /* Replaces the old mb-4 */
+    }
+
+    .btn-continue-shopping {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.6rem 1.2rem;
+        border-radius: 8px;
+        font-weight: 500;
+        text-decoration: none;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        background: rgba(255, 255, 255, 0.1);
+        color: #fff;
+        transition: all 0.2s ease;
+    }
+
+        .btn-continue-shopping:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-2px);
+        }
+    /* --- END: NEW STYLE FOR THE HEADER --- */
+
+
+    .glass-card-opaque {
+        background: rgba(255,255,255,0.1);
+        border: 1px dashed rgba(255,255,255,0.16);
+        border-radius: 18px;
+        padding: 2rem;
+        max-width: 720px;
+        margin: auto;
+    }
+
+    .glass-card {
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.18);
+        border-radius: 16px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        color: #fff;
+        transition: transform .2s ease, box-shadow .2s ease;
+    }
+
+        .glass-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 16px 38px rgba(0,0,0,0.3);
+        }
+
+    .orders-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .order-card {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .order-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .order-id {
+        font-weight: 600;
+        font-size: 1.1rem;
+    }
+
+    .order-status {
+        font-size: 0.8rem;
+        font-weight: 600;
+        padding: 0.25rem 0.6rem;
+        border-radius: 99px;
+        text-transform: uppercase;
+    }
+
+    .status-pending {
+        background-color: #ffc107;
+        color: #333;
+    }
+
+    .status-shipped {
+        background-color: #0dcaf0;
+        color: #000;
+    }
+
+    .status-delivered {
+        background-color: #198754;
+        color: #fff;
+    }
+
+    .status-cancelled {
+        background-color: #dc3545;
+        color: #fff;
+    }
+
+    .status-default {
+        background-color: #6c757d;
+        color: #fff;
+    }
+
+
+    .order-body {
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .order-detail {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.9rem;
+    }
+
+        .order-detail span:first-child {
+            color: rgba(255,255,255,0.6);
+        }
+
+    .order-footer {
+        margin-top: auto;
+        padding: 0.75rem 1rem;
+        border-top: 1px solid rgba(255,255,255,0.1);
+        text-align: right;
+    }
+</style>
+
+@code {
+    private List<OrderDto> myOrders = new();
+    private bool isLoading = true;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AuthService.IsLoggedIn || AuthService.CurrentUser is null)
+        {
+            NavigationManager.NavigateTo("/login?returnUrl=/my-orders");
+            return;
+        }
+
+        try
+        {
+            var client = HttpClientFactory.CreateClient("WebAPI");
+            var allOrders = await client.GetFromJsonAsync<List<OrderDto>>("api/orders");
+
+            if (allOrders is not null)
+            {
+                var currentUserName = AuthService.CurrentUser.Username;
+                myOrders = allOrders
+                    .Where(o => o.CustomerName.Equals(currentUserName, StringComparison.OrdinalIgnoreCase))
+                    .OrderByDescending(o => o.OrderDate)
+                    .ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Could not load orders. Please try again later. Error: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private string GetStatusClass(string? status)
+    {
+        return status?.ToLower() switch
+        {
+            "pending" => "status-pending",
+            "shipped" => "status-shipped",
+            "delivered" => "status-delivered",
+            "cancelled" => "status-cancelled",
+            _ => "status-default"
+        };
+    }
+
+    private void ViewOrderDetails(int orderId)
+    {
+        NavigationManager.NavigateTo($"/my-orders/{orderId}");
+    }
+}

@@ -1,0 +1,85 @@
+﻿@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+@* ✅ تم إزالة fixed-top لمنع المحتوى من الاختفاء خلف الشريط *@
+@* ✅ تم استخدام كلاسات Bootstrap لتوسيط الروابط وجعل الشكل احترافياً *@
+<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+    <div class="container">
+        <a class="navbar-brand fw-bold" href="/user-dashboard">
+            <i class="fas fa-store me-2 text-primary"></i>
+            Company Store
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#userNavbar" aria-controls="userNavbar" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="userNavbar">
+
+            @* توسيط روابط التنقل الرئيسية *@
+            <ul class="navbar-nav mx-auto mb-2 mb-lg-0">
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="/user-dashboard" Match="NavLinkMatch.All">
+                        <i class="fas fa-home me-1"></i> Home
+                    </NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="/products">
+                        <i class="fas fa-box-open me-1"></i> Products
+                    </NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="/cart">
+                        <i class="fas fa-shopping-cart me-1"></i> My Cart
+                    </NavLink>
+                </li>
+            </ul>
+
+            @* منطقة المستخدم وتسجيل الخروج على اليمين *@
+            <div class="d-flex align-items-center">
+                @if (userIsAuthenticated)
+                {
+                    <div class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-user-circle me-1"></i> Welcome, <strong>@userName</strong>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
+                            <li><a class="dropdown-item" href="/profile">My Profile</a></li>
+                            <li><a class="dropdown-item" href="/orders">My Orders</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <button class="dropdown-item text-danger" @onclick="HandleLogout">
+                                    <i class="fas fa-sign-out-alt me-1"></i> Logout
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+                }
+                else
+                {
+                    <a class="btn btn-outline-primary btn-sm" href="/login">Login</a>
+                }
+            </div>
+        </div>
+    </div>
+</nav>
+
+@code {
+    private string? userName;
+    private bool userIsAuthenticated = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        if (user.Identity is { IsAuthenticated: true })
+        {
+            userIsAuthenticated = true;
+            userName = user.Identity.Name;
+        }
+    }
+
+    private void HandleLogout()
+    {
+        // استخدام forceLoad يضمن إعادة تحميل الصفحة بالكامل ومسح حالة المصادقة
+        NavigationManager.NavigateTo("/logout", forceLoad: true);
+    }
+}

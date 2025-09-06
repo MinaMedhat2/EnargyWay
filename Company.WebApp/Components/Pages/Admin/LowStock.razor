@@ -1,0 +1,150 @@
+﻿@page "/admin/low-stock"
+@attribute [Authorize(Roles = "Admin")]
+@layout AdminLayout
+@rendermode InteractiveServer
+@inject HttpClient Http
+@inject IConfiguration Configuration
+@inject NavigationManager Navigation
+
+<PageTitle>Low Stock Report</PageTitle>
+
+<!-- ✅ 1. رأس صفحة احترافي وموحد -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="mb-0">Low Stock Report</h1>
+        <p class="text-muted mb-0">Find products that have fallen below a specific stock threshold.</p>
+    </div>
+    <i class="fas fa-exclamation-triangle fa-3x text-danger"></i>
+</div>
+
+<!-- ✅ 2. تم دمج قسم الفلتر بشكل أنيق -->
+<div class="card shadow-sm mb-4">
+    <div class="card-body d-flex align-items-center gap-3">
+        <label for="threshold" class="form-label fw-bold mb-0">Show products with quantity less than or equal to:</label>
+        <input type="number" id="threshold" class="form-control" @bind="stockThreshold" style="width: 100px;" />
+        <button class="btn btn-primary" @onclick="LoadReport" disabled="@isLoading">
+            @if (isLoading)
+            {
+                <span class="spinner-border spinner-border-sm me-2"></span>
+                <span>Loading...</span>
+            }
+            else
+            {
+                <i class="fas fa-sync-alt me-2"></i>
+                <span>Refresh Report</span>
+            }
+        </button>
+    </div>
+</div>
+
+
+@if (isLoading && lowStockProducts == null) // إظهار التحميل المبدئي فقط
+{
+    <div class="text-center p-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div><p class="mt-2"><em>Loading report...</em></p></div>
+}
+else if (lowStockProducts != null)
+{
+    @if (lowStockProducts.Any())
+    {
+        <!-- ✅ 3. تطبيق التصميم الاحترافي على الجدول -->
+        <div class="table-wrapper">
+            <table class="table align-middle">
+                <thead>
+                    <tr>
+                        <th style="width: 10%;">Image</th>
+                        <th style="width: 40%;">Product Name</th>
+                        <th style="width: 30%;">Description</th>
+                        <th style="width: 10%;" class="text-center">Stock</th>
+                        <th style="width: 10%;" class="text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var product in lowStockProducts)
+                    {
+                        <tr>
+                            <td>
+                                <img src="@(ApiBaseUrl + "/" + product.ImagePath)" class="img-thumbnail" alt="@product.Name" />
+                            </td>
+                            <td><strong>@product.Name</strong></td>
+                            <td>@product.Description</td>
+                            <td class="text-center">
+                                <span class="badge bg-danger rounded-pill fs-6">@product.StockQuantity</span>
+                            </td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-warning" @onclick="() => GoToProductPage(product.ProductID)">
+                                    <i class="fas fa-box-open"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-success text-center">
+            <h4 class="alert-heading">All Good!</h4>
+            <p>No products found below the specified threshold of <strong>@stockThreshold</strong>.</p>
+        </div>
+    }
+}
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+
+
+@code {
+    private int stockThreshold = 15;
+    private List<ProductDto>? lowStockProducts;
+    private bool isLoading = false;
+    private string? errorMessage;
+    private string ApiBaseUrl { get; set; } = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ApiBaseUrl = Configuration["ApiBaseUrl"] ?? "https://localhost:7185";
+        await LoadReport();
+    }
+
+    private async Task LoadReport()
+    {
+        isLoading = true;
+        errorMessage = null;
+        // لا تقم بتفريغ القائمة هنا للسماح بعرض البيانات القديمة أثناء التحميل
+        // lowStockProducts = null;
+        StateHasChanged(); // تحديث الواجهة لإظهار حالة التحميل على الزر
+
+        var requestUrl = $"api/products/lowstock?threshold={stockThreshold}";
+        try
+        {
+            lowStockProducts = await Http.GetFromJsonAsync<List<ProductDto>>(requestUrl);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to load data. Details: {ex.Message}";
+            lowStockProducts = new List<ProductDto>(); // تفريغ القائمة في حالة حدوث خطأ
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged(); // تحديث الواجهة لإخفاء حالة التحميل
+        }
+    }
+
+    private void GoToProductPage(int productId)
+    {
+        Navigation.NavigateTo($"/admin/products");
+    }
+
+    public class ProductDto
+    {
+        public int ProductID { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public decimal Price { get; set; }
+        public string? ImagePath { get; set; }
+        public int StockQuantity { get; set; }
+    }
+}
