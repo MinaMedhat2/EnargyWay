@@ -1,0 +1,82 @@
+﻿@inherits LayoutComponentBase
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
+
+<div class="delivery-layout">
+    <nav class="navbar">
+        <div class="navbar-container">
+            <a class="navbar-brand" href="/delivery-dashboard">
+                <img src="/logo4.jpg" alt="Company Logo" class="brand-logo" />
+                <span>Delivery Panel</span>
+            </a>
+
+            <div class="navbar-logout">
+                <button class="logout-button" @onclick="Logout">
+                    <span class="oi oi-account-logout" aria-hidden="true"></span> Logout
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="content-area">
+        @Body
+    </main>
+</div>
+
+<style>
+    /* (نفس كود الـ CSS الخاص بالـ Layout يبقى كما هو بدون تغيير) */
+    .delivery-layout .navbar {
+        background: #212529;
+        padding: 0.75rem 1.5rem;
+        color: white;
+    }
+
+    .delivery-layout .navbar-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+    }
+
+    .delivery-layout .navbar-brand {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        color: white;
+        font-weight: 600;
+        font-size: 1.2rem;
+        text-decoration: none;
+    }
+
+    .delivery-layout .brand-logo {
+        height: 40px;
+    }
+
+    .delivery-layout .logout-button {
+        background-color: transparent;
+        border: 1px solid #dc3545;
+        color: #dc3545;
+        padding: 0.4rem 0.8rem;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+        .delivery-layout .logout-button:hover {
+            background-color: #dc3545;
+            color: white;
+        }
+
+    .content-area {
+        padding: 2rem;
+        background-color: #f4f7f6;
+        min-height: calc(100vh - 60px);
+    }
+</style>
+
+@code {
+    private async Task Logout()
+    {
+        Navigation.NavigateTo("/login", forceLoad: true);
+    }
+}

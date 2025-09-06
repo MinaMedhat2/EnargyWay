@@ -1,0 +1,146 @@
+﻿/* استدعاء خط جوجل */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap' );
+
+/* متغيرات الألوان والخطوط الرئيسية للموقع */
+:root {
+    --bg-primary: #f8fafc;
+    --bg-secondary: #ffffff;
+    --border-color: #e2e8f0;
+    --text-primary: #111827;
+    --text-secondary: #374151;
+    --text-hover: #000000;
+    --accent-color: #3b82f6;
+    --accent-hover: #2563eb;
+    --danger-color: #ef4444;
+}
+
+html, body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-primary) !important;
+    color: var(--text-primary) !important;
+    margin: 0;
+    padding: 0;
+    height: 100%;
+}
+
+.page {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background-color: var(--bg-primary) !important;
+}
+
+/* ===== Navbar (Admin) ===== */
+/* هذا التنسيق قد يكون خاصاً بشريط تنقل الأدمن، وهو جيد */
+.top-navbar {
+    background: linear-gradient(90deg, var(--bg-secondary), var(--bg-primary));
+    border-bottom: 1px solid var(--border-color);
+    padding: 0 2rem;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    animation: slideDown 0.6s ease;
+}
+
+    .top-navbar .navbar-brand {
+        color: var(--text-hover);
+        font-weight: 700;
+        font-size: 1.3rem;
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        transition: color 0.3s ease;
+    }
+
+        .top-navbar .navbar-brand:hover {
+            color: var(--accent-color);
+        }
+
+    .top-navbar .nav-link {
+        color: var(--text-secondary);
+        padding: 1rem 1rem;
+        border-bottom: 3px solid transparent;
+        transition: color 0.3s ease, border-color 0.3s ease;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+        .top-navbar .nav-link:hover {
+            color: var(--text-hover);
+        }
+
+        .top-navbar .nav-link.active {
+            color: var(--text-hover);
+            border-bottom-color: var(--accent-color);
+        }
+
+        .top-navbar .nav-link i {
+            font-size: 1rem;
+        }
+
+/* ===== Logout button (Admin) ===== */
+.logout-link {
+    color: var(--danger-color) !important;
+    font-weight: 600;
+    border: 1px solid var(--danger-color);
+    border-radius: 8px;
+    padding: 0.6rem 1rem !important;
+    margin-left: 0.8rem;
+    transition: all 0.3s ease;
+}
+
+    .logout-link:hover {
+        background-color: var(--danger-color);
+        color: #fff !important;
+    }
+
+/* ===== Animations ===== */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ===== User Page Specific Styles ===== */
+/* هذه الأكواد كانت متناثرة، تم تجميعها هنا للتنظيم */
+
+.user-navbar-sm {
+    padding-top: 0.3rem !important;
+    padding-bottom: 0.3rem !important;
+}
+
+.product-card-hover {
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    border: none;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+}
+
+    .product-card-hover:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    }
+
+.main-footer {
+    background-color: #ffffff;
+}

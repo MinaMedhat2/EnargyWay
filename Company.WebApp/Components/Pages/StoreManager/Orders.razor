@@ -1,0 +1,218 @@
+﻿@page "/store-manager/orders"
+@layout StoreManagerLayout
+@attribute [Authorize(Roles = "StoreManager")]
+
+@using System.Globalization
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<div class="page-container">
+    <div class="page-header">
+        <h3>
+            <span class="oi oi-list-rich" aria-hidden="true"></span> Order Management
+        </h3>
+        <p>View incoming orders and prepare them for delivery.</p>
+    </div>
+
+    @if (orders == null)
+    {
+        <div class="loading-container">
+            <div class="spinner"></div>
+            <p>Loading orders...</p>
+        </div>
+    }
+    else if (!orders.Any())
+    {
+        <div class="alert alert-info">No active orders found.</div>
+    }
+    else
+    {
+        <div class="table-responsive-container">
+            <table class="table table-hover stylish-table">
+                <thead>
+                    <tr>
+                        <th>Order ID</th>
+                        <th>Customer</th>
+                        <th>Order Date</th>
+                        <th>Shipping Address</th>
+                        <th class="text-center">Status</th>
+                        <th class="text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var order in orders)
+                    {
+                        <tr>
+                            <td><strong>#@order.OrderId</strong></td>
+                            <td>
+                                <div class="customer-info">
+                                    <div class="fw-bold">@order.CustomerName</div>
+                                    <div class="text-muted small">@order.CustomerEmail</div>
+                                </div>
+                            </td>
+                            <td>@order.OrderDate.ToString("dd MMM yyyy, hh:mm tt", CultureInfo.InvariantCulture)</td>
+                            <td>@order.ShippingAddress</td>
+                            <td class="text-center">
+                                <span class="status-badge @GetStatusClass(order.OrderStatus)">
+                                    @order.OrderStatus
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-primary" @onclick="() => ShowUpdateStatusModal(order)" title="Update Status">
+                                    <span class="oi oi-pencil"></span> Update Status
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@* --- Modal for Updating Status --- *@
+@if (selectedOrder != null)
+{
+    <div class="modal fade show" style="display:block; background-color: rgba(0,0,0,0.5);" aria-modal="true" role="dialog">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Update Status for Order #@selectedOrder.OrderId</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Select the new status for this order:</p>
+
+                    @* --- بداية التعديل الجوهري --- *@
+                    <select @bind="newStatus" class="form-select">
+                        <option value="Pending">Pending</option>
+                        <option value="Out for Delivery">Out for Delivery</option>
+                        <option value="Canceled">Canceled</option>
+                    </select>
+                    @* --- نهاية التعديل الجوهري --- *@
+
+                    @if (!string.IsNullOrEmpty(updateMessage))
+                    {
+                        <div class="alert @(isUpdateError ? "alert-danger" : "alert-success") mt-3">@updateMessage</div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseModal">Close</button>
+                    <button type="button" class="btn btn-primary" @onclick="HandleStatusUpdate" disabled="@isSaving">
+                        @if (isSaving)
+                        {
+                            <span class="spinner-border spinner-border-sm"></span>
+                            <span> Saving...</span>
+                        }
+                        else
+                        {
+                            <span>Save Changes</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+
+@code {
+    private Order[]? orders;
+    private Order? selectedOrder;
+    private string newStatus = "Pending";
+    private string updateMessage = "";
+    private bool isUpdateError = false;
+    private bool isSaving = false; // لمنع الضغط المتكرر على زر الحفظ
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadOrders();
+    }
+
+    private async Task LoadOrders()
+    {
+        try
+        {
+            // هذا الـ endpoint الآن يجلب فقط الطلبات التي لم تخرج للتوصيل بعد
+            orders = await Http.GetFromJsonAsync<Order[]>("api/Orders");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error fetching orders: {ex.Message}");
+        }
+    }
+
+    private void ShowUpdateStatusModal(Order order)
+    {
+        selectedOrder = order;
+        newStatus = order.OrderStatus ?? "Pending";
+        updateMessage = "";
+        isUpdateError = false;
+    }
+
+    private async Task HandleStatusUpdate()
+    {
+        if (selectedOrder == null || isSaving) return;
+
+        isSaving = true;
+        updateMessage = "";
+
+        try
+        {
+            var response = await Http.PutAsJsonAsync($"api/orders/{selectedOrder.OrderId}/status", new { NewStatus = newStatus });
+
+            if (response.IsSuccessStatusCode)
+            {
+                isUpdateError = false;
+                updateMessage = "Status updated successfully! The order has been moved to the next stage.";
+
+                // انتظر قليلاً ثم أعد تحميل القائمة وأغلق النافذة
+                await Task.Delay(1500);
+                await LoadOrders(); // سيتم تحديث القائمة وسيختفي الطلب إذا تم إرساله للتوصيل
+                CloseModal();
+            }
+            else
+            {
+                isUpdateError = true;
+                var errorResponse = await response.Content.ReadAsStringAsync();
+                updateMessage = $"Failed to update status. Server responded with: {errorResponse}";
+            }
+        }
+        catch (Exception ex)
+        {
+            isUpdateError = true;
+            updateMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private void CloseModal()
+    {
+        selectedOrder = null;
+        isSaving = false;
+    }
+
+    private string GetStatusClass(string? status)
+    {
+        return status?.ToLower() switch
+        {
+            "pending" => "status-pending",
+            "out for delivery" => "status-shipped", // يمكن استخدام نفس اللون
+            "canceled" => "status-canceled",
+            _ => "status-default"
+        };
+    }
+
+    public class Order
+    {
+        public int OrderId { get; set; }
+        public string? CustomerName { get; set; }
+        public string? CustomerEmail { get; set; }
+        public DateTime OrderDate { get; set; }
+        public string? ShippingAddress { get; set; }
+        public string? OrderStatus { get; set; }
+    }
+}

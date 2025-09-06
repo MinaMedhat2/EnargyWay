@@ -1,0 +1,260 @@
+﻿@page "/"
+@page "/products"
+@rendermode @(new InteractiveServerRenderMode(prerender: true))
+
+@using System.Net.Http.Json
+@using Company.Client.Models
+@using Company.Client.Services
+
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager NavigationManager
+@inject AuthService AuthService
+@inject CartService CartService
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Products | EnergyWay</PageTitle>
+
+<div class="products-container">
+    <h1 class="products-title fade-in-up">PRODUCTS</h1>
+
+    @if (loading)
+    {
+        <div class="text-center mb-8">
+            <div style="font-size: 1.5rem; color: var(--text-secondary); font-family: var(--font-family); font-weight: 500;">Loading products...</div>
+        </div>
+    }
+    else if (!string.IsNullOrWhiteSpace(error))
+    {
+        <div class="text-center mb-8">
+            <div style="font-size: 1.2rem; color: #e74c3c; background: #fdf2f2; padding: 1rem; border-radius: 0.5rem; font-family: var(--font-family);">
+                Error: @error
+            </div>
+        </div>
+    }
+    else if (View.Count == 0)
+    {
+        <div class="text-center mb-8">
+            <div style="font-size: 1.2rem; color: var(--text-secondary); font-family: var(--font-family); font-weight: 500;">No products found.</div>
+        </div>
+    }
+    else
+    {
+        <div class="products-grid">
+            @foreach (var product in View)
+            {
+                <div class="product-card fade-in-up">
+                    <img src="@GetImage(product)" alt="@product.Name" class="product-image" />
+                    <h3 class="product-title">@product.Name</h3>
+                    <div class="product-price">$@product.Price.ToString("0.00")</div>
+                    <p class="product-description">@Short(product.Description)</p>
+
+                    @if (product.StockQuantity <= 0)
+                    {
+                        <div class="product-status status-out-of-stock">Out of Stock</div>
+                    }
+                    else if (product.StockQuantity < 10)
+                    {
+                        <div class="product-status status-warning">Only @product.StockQuantity left</div>
+                    }
+                    else
+                    {
+                        <div class="product-status status-available">Available</div>
+                    }
+
+                    <div class="product-buttons">
+                        @if (product.StockQuantity > 0)
+                        {
+                            <button class="product-btn btn-primary-style" @onclick="() => BuyNow(product)">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                    <path d="M0 2.5A.5.5 0 0 1 .5 2H2a.5.5 0 0 1 .485.379L2.89 4H14.5a.5.5 0 0 1 .485.621l-1.5 6A.5.5 0 0 1 13 11H4a.5.5 0 0 1-.485-.379L1.61 3H.5a.5.5 0 0 1-.5-.5zM3.14 5l1.25 5h8.22l1.25-5H3.14zM5 13a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm-2 1a2 2 0 1 1 4 0 2 2 0 0 1-4 0zm9-1a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm-2 1a2 2 0 1 1 4 0 2 2 0 0 1-4 0z" />
+                                </svg>
+                                <span>Buy Now</span>
+                            </button>
+
+                            <button class="product-btn btn-secondary-style" @onclick="() => AddToCart(product)">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                    <path d="M8 1a2.5 2.5 0 0 1 2.5 2.5V4h-5v-.5A2.5 2.5 0 0 1 8 1zm3.5 3v-.5a3.5 3.5 0 1 0-7 0V4H1v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V4h-3.5zM2 5h12v9a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V5z" />
+                                </svg>
+                                <span>Add to Cart</span>
+                            </button>
+                        }
+                        else
+                        {
+                            <button class="product-btn btn-disabled-style" disabled>
+                                Out of Stock
+                            </button>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private List<Product> products = new();
+    private bool loading = true;
+    private string? error;
+
+    private string search = "";
+    private string sort = "name";
+    private bool inStockOnly = false;
+
+    private string apiBaseUrl = "https://localhost:7185"; // API
+
+    protected override async Task OnInitializedAsync()
+    {
+        var uri = new Uri(NavigationManager.Uri);
+        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        search = query["q"] ?? "";
+        sort = query["sort"] ?? "name";
+        var client = HttpClientFactory.CreateClient("WebAPI");
+        try
+        {
+            var response = await client.GetAsync("api/products");
+            if (response.IsSuccessStatusCode)
+            {
+                products = await response.Content.ReadFromJsonAsync<List<Product>>() ?? new();
+            }
+            else
+            {
+                error = $"API Error: Could not fetch products (Status: {response.StatusCode}). Using sample data.";
+                products = GetSampleProducts();
+            }
+        }
+        catch (Exception ex)
+        {
+            error = $"Connection Error: Could not connect to the API. Using sample data. {ex.Message}";
+            products = GetSampleProducts();
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var uri = new Uri(NavigationManager.Uri);
+        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        var newSearch = query["q"] ?? "";
+        var newSort = query["sort"] ?? "name";
+        if (newSearch != search || newSort != sort)
+        {
+            search = newSearch;
+            sort = newSort;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private List<Product> GetSampleProducts()
+    {
+        return new List<Product>
+        {
+            new Product { ProductID = 1, Name = "Solar Panel Kit", Description = "High-efficiency solar panel system for residential use. Includes mounting hardware and inverter.", Price = 299.99m, StockQuantity = 15, ImagePath = null },
+            new Product { ProductID = 2, Name = "Wind Turbine Generator", Description = "Compact wind turbine perfect for small-scale energy generation. Weather-resistant design.", Price = 899.99m, StockQuantity = 8, ImagePath = null },
+            new Product { ProductID = 3, Name = "Battery Storage System", Description = "Lithium-ion battery system for storing renewable energy. Long-lasting and efficient.", Price = 1299.99m, StockQuantity = 12, ImagePath = null },
+            new Product { ProductID = 4, Name = "Smart Energy Monitor", Description = "Monitor your energy consumption in real-time. WiFi-enabled with mobile app support.", Price = 149.99m, StockQuantity = 25, ImagePath = null },
+            new Product { ProductID = 5, Name = "LED Light System", Description = "Energy-efficient LED lighting system with smart controls and dimming capabilities.", Price = 199.99m, StockQuantity = 30, ImagePath = null },
+            new Product { ProductID = 6, Name = "Electric Vehicle Charger", Description = "Fast-charging station for electric vehicles. Compatible with all major EV brands.", Price = 799.99m, StockQuantity = 6, ImagePath = null },
+            new Product { ProductID = 7, Name = "Hydroelectric Generator", Description = "Small-scale hydroelectric generator for streams and rivers. Eco-friendly power solution.", Price = 1599.99m, StockQuantity = 4, ImagePath = null },
+            new Product { ProductID = 8, Name = "Energy Management Hub", Description = "Central control system for managing all your renewable energy sources and consumption.", Price = 599.99m, StockQuantity = 18, ImagePath = null }
+        };
+    }
+
+    private List<Product> View
+    {
+        get
+        {
+            IEnumerable<Product> q = products;
+            if (inStockOnly)
+                q = q.Where(p => p.StockQuantity > 0);
+            if (!string.IsNullOrWhiteSpace(search))
+                q = q.Where(p =>
+                    (p.Name?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (p.Description?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false));
+            q = sort switch
+            {
+                "price-asc" => q.OrderBy(p => p.Price),
+                "price-desc" => q.OrderByDescending(p => p.Price),
+                "stock" => q.OrderByDescending(p => p.StockQuantity),
+                _ => q.OrderBy(p => p.Name)
+            };
+            return q.ToList();
+        }
+    }
+
+    private static string Short(string? s)
+        => string.IsNullOrWhiteSpace(s) ? "No description available." :
+           (s.Length <= 120 ? s : s[..120] + "...");
+
+    private string GetImage(Product p)
+    {
+        if (!string.IsNullOrWhiteSpace(p.ImagePath))
+        {
+            var path = p.ImagePath.StartsWith("/") ? p.ImagePath : "/" + p.ImagePath;
+            return $"{apiBaseUrl}{path}";
+        }
+        var imageIds = new[] { "energy", "solar", "wind", "battery", "electric", "green", "power", "renewable" };
+        var imageId = imageIds[p.ProductID % imageIds.Length];
+        return $"https://picsum.photos/seed/{imageId}{p.ProductID}/400/300";
+    }
+
+    // --- دالة الشراء الآن (لم تتغير ) ---
+    private void BuyNow(Product product)
+    {
+        if (AuthService.IsLoggedIn)
+        {
+            NavigationManager.NavigateTo($"/checkout/{product.ProductID}");
+        }
+        else
+        {
+            var returnUrl = NavigationManager.Uri;
+            NavigationManager.NavigateTo($"/login?returnUrl={Uri.EscapeDataString(returnUrl)}");
+        }
+    }
+
+    // --- START: دالة الإضافة إلى السلة (تم تعديلها) ---
+    private async Task AddToCart(Product product)
+    {
+        // 1. التحقق من تسجيل الدخول أولاً
+        if (AuthService.IsLoggedIn)
+        {
+            // 2. إذا كان مسجلاً، قم بإضافة المنتج إلى السلة
+            try
+            {
+                await CartService.AddToCart(product);
+                await JSRuntime.InvokeVoidAsync("Swal.fire", new
+                {
+                    toast = true,
+                    position = "top-end",
+                    icon = "success",
+                    title = "Added to cart!",
+                    showConfirmButton = false,
+                    timer = 2000,
+                    timerProgressBar = true
+                });
+            }
+            catch (Exception ex)
+            {
+                await JSRuntime.InvokeVoidAsync("Swal.fire", new
+                {
+                    toast = true,
+                    position = "top-end",
+                    icon = "error",
+                    title = "Could not add to cart",
+                    text = ex.Message,
+                    showConfirmButton = false,
+                    timer = 3000
+                });
+            }
+        }
+        else
+        {
+            // 3. إذا لم يكن مسجلاً، قم بتوجيهه لصفحة تسجيل الدخول
+            var returnUrl = NavigationManager.Uri;
+            NavigationManager.NavigateTo($"/login?returnUrl={Uri.EscapeDataString(returnUrl)}");
+        }
+    }
+    // --- END: دالة الإضافة إلى السلة (تم تعديلها) ---
+}

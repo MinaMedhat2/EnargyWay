@@ -1,0 +1,115 @@
+﻿@page "/admin/sales"
+@attribute [Authorize(Roles = "Admin")]
+@layout AdminLayout
+@rendermode InteractiveServer
+@inject HttpClient Http
+
+<PageTitle>Daily Sales Report</PageTitle>
+
+<!-- ✅ 1. رأس صفحة احترافي وموحد -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="mb-0">Daily Sales Report</h1>
+        <p class="text-muted mb-0">A summary of all sales recorded on @DateTime.Today.ToString("D").</p>
+    </div>
+    <i class="fas fa-chart-line fa-3x text-primary"></i>
+</div>
+
+@if (isLoading)
+{
+    <div class="text-center p-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div><p class="mt-2"><em>Loading today's sales...</em></p></div>
+}
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+else if (dailySales != null && dailySales.Any())
+{
+    <!-- ✅ 2. إضافة بطاقات ملخصة للمعلومات الهامة -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="card-subtitle mb-2 text-muted">Total Revenue Today</h6>
+                    <h2 class="card-title text-success">@TotalRevenue.ToString("C")</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="card-subtitle mb-2 text-muted">Total Transactions</h6>
+                    <h2 class="card-title text-primary">@dailySales.Count</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ✅ 3. تطبيق التصميم الاحترافي على جدول المبيعات -->
+    <div class="table-wrapper">
+        <table class="table align-middle">
+            <thead>
+                <tr>
+                    <th>Product Name</th>
+                    <th class="text-center">Quantity</th>
+                    <th class="text-end">Total Price</th>
+                    <th class="text-end">Time of Sale</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var sale in dailySales)
+                {
+                    <tr>
+                        <td><strong>@sale.ProductName</strong></td>
+                        <td class="text-center">@sale.Quantity</td>
+                        <td class="text-end">@sale.TotalPrice.ToString("C")</td>
+                        <td class="text-end text-muted">@sale.SaleDate.ToString("h:mm tt")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+else
+{
+    <div class="alert alert-info text-center">
+        <h4 class="alert-heading">No Sales Today</h4>
+        <p>There have been no sales recorded yet for today. New sales will appear here as they happen.</p>
+    </div>
+}
+
+@code {
+    private List<SaleResponseDto>? dailySales;
+    private bool isLoading = true;
+    private string? errorMessage;
+
+    // خاصية محسوبة لإجمالي الإيرادات
+    private decimal TotalRevenue => dailySales?.Sum(s => s.TotalPrice) ?? 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        errorMessage = null;
+        try
+        {
+            dailySales = await Http.GetFromJsonAsync<List<SaleResponseDto>>("api/sales/today");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading data: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    public class SaleResponseDto
+    {
+        public int SaleID { get; set; }
+        public string ProductName { get; set; } = string.Empty;
+        public int Quantity { get; set; }
+        public decimal TotalPrice { get; set; }
+        public DateTime SaleDate { get; set; }
+    }
+}

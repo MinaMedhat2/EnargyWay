@@ -1,0 +1,207 @@
+﻿@page "/account"
+@layout MainLayout
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+
+@using Company.Client.Models
+@using Company.Client.Services
+@using System.Net.Http.Json
+@inject NavigationManager NavigationManager
+@inject AuthService AuthService
+@inject IHttpClientFactory HttpClientFactory
+
+<PageTitle>My Account | EnergyWay</PageTitle>
+
+<div class="page-background-shared">
+    <div class="overlay-shared">
+        <div class="container py-5">
+
+            @if (isLoading)
+            {
+                <div class="text-center p-5">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="mt-3 text-light">Loading your account details...</p>
+                </div>
+            }
+            else if (userAccount is not null)
+            {
+                <div class="account-card glass-card-about">
+                    <div class="account-header">
+                        <div class="avatar">
+                            @userAccount.Username.FirstOrDefault()
+                        </div>
+                        <div class="user-info">
+                            <h2 class="username">@userAccount.Username</h2>
+                            <p class="email">@userAccount.Email</p>
+                        </div>
+                    </div>
+
+                    <hr class="section-divider" />
+
+                    <div class="account-details">
+                        <div class="detail-item">
+                            <span class="detail-label">User ID</span>
+                            <span class="detail-value">#@userAccount.UserID</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Member Since</span>
+                            <span class="detail-value">@userAccount.CreatedAt.ToString("dd MMMM yyyy")</span>
+                        </div>
+                    </div>
+
+                    <div class="account-footer">
+                        <button class="btn btn-outline-light" @onclick='() => NavigationManager.NavigateTo("/my-orders")'>
+                            View My Orders
+                        </button>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="glass-card-opaque text-center p-5 mx-auto">
+                    <h3 class="text-danger">An Error Occurred</h3>
+                    <p class="text-white-50">@errorMessage</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Shared background styles from AboutUs page */
+    .page-background-shared {
+        background: url('/images/back.jpeg') no-repeat center center / cover;
+        min-height: 100vh;
+        position: relative;
+    }
+
+    .overlay-shared {
+        background: rgba(0,0,0,0.25);
+        backdrop-filter: blur(10px) saturate(120%);
+        -webkit-backdrop-filter: blur(10px) saturate(120%);
+        min-height: 100vh;
+        width: 100%;
+    }
+
+    .glass-card-about {
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.18);
+        border-radius: 18px;
+        padding: 2.5rem;
+        color: #fff;
+        max-width: 700px;
+        margin: auto;
+    }
+
+    .section-divider {
+        border-color: rgba(255,255,255,0.15);
+        margin: 2rem 0;
+    }
+
+    .glass-card-opaque {
+        background: rgba(255,255,255,0.1);
+        border: 1px dashed rgba(255,255,255,0.16);
+        border-radius: 18px;
+        padding: 2rem;
+        max-width: 720px;
+        margin: auto;
+    }
+
+    /* New styles specific to Account page */
+    .account-card {
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+
+    .account-header {
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+    }
+
+    .avatar {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #007bff, #0056b3);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2.5rem;
+        font-weight: 600;
+        flex-shrink: 0;
+        border: 3px solid rgba(255,255,255,0.3);
+    }
+
+    .user-info .username {
+        font-size: 2rem;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .user-info .email {
+        font-size: 1.1rem;
+        color: rgba(255,255,255,0.7);
+        margin: 0;
+    }
+
+    .account-details {
+        display: grid;
+        gap: 1rem;
+    }
+
+    .detail-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: rgba(255,255,255,0.05);
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+    }
+
+    .detail-label {
+        color: rgba(255,255,255,0.6);
+        font-weight: 500;
+    }
+
+    .detail-value {
+        font-weight: 600;
+        font-size: 1.05rem;
+    }
+
+    .account-footer {
+        margin-top: 2rem;
+        text-align: center;
+    }
+</style>
+
+@code {
+    private UserAccount? userAccount;
+    private bool isLoading = true;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Ensure user is logged in before proceeding
+        if (!AuthService.IsLoggedIn)
+        {
+            NavigationManager.NavigateTo("/login?returnUrl=/account");
+            return;
+        }
+
+        try
+        {
+            var client = HttpClientFactory.CreateClient("WebAPI");
+            // This will call the new endpoint: GET /api/auth/me
+            userAccount = await client.GetFromJsonAsync<UserAccount>("api/auth/me");
+        }
+        catch (Exception ex)
+        {
+            // Handle potential errors like 401 Unauthorized or connection issues
+            errorMessage = $"Could not load your account details. Please try logging in again. Error: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}
